@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simon Game</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container { text-align: center; margin-top: 50px; }
+        .game-board { display: flex; justify-content: center; margin-bottom: 20px; }
+        .color { width: 100px; height: 100px; margin: 10px; cursor: pointer; }
+        .red { background-color: red; }
+        .green { background-color: green; }
+        .blue { background-color: blue; }
+        .yellow { background-color: yellow; }
+        .active { opacity: 0.6; }
+        #message { margin: 20px 0; }
+        .hidden { display: none; }
+        body {
+            background-color: #000;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            color: #fff;
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .game-board {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, #444, #000);
+            position: relative;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+        }
+
+        .color {
+            width: 50%;
+            height: 50%;
+            position: absolute;
+            border-radius: 50%;
+            transition: transform 0.2s ease;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.4);
+        }
+
+        .color:active {
+            transform: scale(0.95);
+        }
+
+        #red {
+            background-color: #ff4c4c;
+            top: 0;
+            left: 0;
+            border-top-left-radius: 50%;
+        }
+
+        #green {
+            background-color: #4caf50;
+            top: 0;
+            right: 0;
+            border-top-right-radius: 50%;
+        }
+
+        #blue {
+            background-color: #2196f3;
+            bottom: 0;
+            left: 0;
+            border-bottom-left-radius: 50%;
+        }
+
+        #yellow {
+            background-color: #ffeb3b;
+            bottom: 0;
+            right: 0;
+            border-bottom-right-radius: 50%;
+        }
+
+        #center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            background-color: #333;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #ccc;
+            font-size: 24px;
+            text-transform: uppercase;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+
+        #menu {
+            color: #fff;
+            font-size: 18px;
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+        }
+
+        #score {
+            color: #fff;
+            font-size: 18px;
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+        }
+
+        #ranking-list {
+            color: #fff;
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #ranking-list li {
+            margin: 10px 0;
+            font-size: 18px;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Simon Game</h1>
+    
+    <!-- Tela de Cadastro -->
+    <div id="register-screen">
+        <h2>Cadastro</h2>
+        <input type="text" id="username" placeholder="Nome de usuário" required><br>
+        <input type="email" id="email" placeholder="E-mail" required><br>
+        <input type="password" id="password" placeholder="Senha" required><br>
+        <button onclick="register()">Cadastrar</button>
+        <p id="register-message"></p>
+    </div>
+    
+    <!-- Tela de Jogo -->
+    <div id="game-screen" class="hidden">
+        <div class="game-board">
+            <div class="color red" id="red" onclick="playerTurn('red')"></div>
+            <div class="color green" id="green" onclick="playerTurn('green')"></div>
+            <div class="color blue" id="blue" onclick="playerTurn('blue')"></div>
+            <div class="color yellow" id="yellow" onclick="playerTurn('yellow')"></div>
+        </div>
+        <button onclick="startGame()">Iniciar Jogo</button>
+        <button onclick="showRanking()">Ver Ranking</button>
+        <p id="message"></p>
+        <p id="score">Pontuação: 0</p>
+    </div>
+    
+    <!-- Tela de Ranking -->
+    <div id="ranking-screen" class="hidden">
+        <h2>Ranking Geral</h2>
+        <ul id="ranking-list"></ul>
+        <button onclick="goBackToGame()">Voltar para o Jogo</button>
+    </div>
+</div>
+
+<script>
+    let sequence = [];
+    let playerSequence = [];
+    let colors = ['red', 'green', 'blue', 'yellow'];
+    let score = 0;
+    let highScore = 0;
+    let user = { username: '', email: '', scoreHistory: [] };
+    let ranking = [];
+
+    // Função de cadastro
+    function register() {
+        const username = document.getElementById('username').value;
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        if (username && email && password) {
+            user.username = username;
+            user.email = email;
+            document.getElementById('register-message').textContent = 'Cadastro bem-sucedido!';
+            document.getElementById('register-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+        } else {
+            document.getElementById('register-message').textContent = 'Preencha todos os campos!';
+        }
+    }
+
+    // Função para iniciar o jogo
+    function startGame() {
+        score = 0;
+        sequence = [];
+        playerSequence = [];
+        nextSequence();
+    }
+
+    // Gerar a próxima sequência
+    function nextSequence() {
+        let randomColor = colors[Math.floor(Math.random() * colors.length)];
+        sequence.push(randomColor);
+        playerSequence = [];
+        playSequence();
+    }
+
+    // Mostrar a sequência de cores
+    function playSequence() {
+        let delay = 0;
+        sequence.forEach((color, index) => {
+            setTimeout(() => {
+                document.getElementById(color).classList.add('active');
+            }, delay);
+            setTimeout(() => {
+                document.getElementById(color).classList.remove('active');
+            }, delay + 500);
+            delay += 1000;
+        });
+    }
+
+    // Turno do jogador
+    function playerTurn(color) {
+        playerSequence.push(color);
+        const currentMove = playerSequence.length - 1;
+        
+        if (playerSequence[currentMove] === sequence[currentMove]) {
+            if (playerSequence.length === sequence.length) {
+                score++;
+                document.getElementById('score').textContent = `Pontuação: ${score}`;
+                setTimeout(nextSequence, 1000);
+            }
+        } else {
+            endGame();
+        }
+    }
+
+    // Fim de jogo
+    function endGame() {
+        document.getElementById('message').textContent = `Fim de jogo! Sua pontuação foi: ${score}`;
+        user.scoreHistory.push({ score, date: new Date() });
+        if (score > highScore) {
+            highScore = score;
+            document.getElementById('message').textContent += ' Novo recorde!';
+        }
+        ranking.push({ username: user.username, score });
+        updateRanking();
+    }
+
+    // Atualizar o ranking
+    function updateRanking() {
+        ranking.sort((a, b) => b.score - a.score);
+        document.getElementById('ranking-list').innerHTML = '';
+        ranking.forEach((player, index) => {
+            const li = document.createElement('li');
+            li.textContent = `${player.username}: ${player.score}`;
+            document.getElementById('ranking-list').appendChild(li);
+        });
+    }
+
+    // Mostrar ranking
+    function showRanking() {
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('ranking-screen').classList.remove('hidden');
+    }
+
+    // Voltar para o jogo
+    function goBackToGame() {
+        document.getElementById('ranking-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+    }
+</script>
+
+</body>
+</html>
